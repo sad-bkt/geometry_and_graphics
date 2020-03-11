@@ -10,11 +10,12 @@ int transformation;
 char symbol;
 int number, h, w, max_color;
 std::vector<unsigned char> image1, image2;
+FILE *fin, *fout;
 
 void inversion()
 {
 	for (int i = 0; i < image2.size(); ++i)
-		image2[i] = max_color - (int) image1[i];
+		image2[i] = max_color - (int)image1[i];
 }
 
 void reflection_gorisontal()
@@ -33,7 +34,7 @@ void reflection_gorisontal()
 				image2[i * 3 * h + j] = image1[i * 3 * h + 3 * h - j - 3];
 				image2[i * 3 * h + j + 1] = image1[i * 3 * h + 3 * h - j - 2];
 				image2[i * 3 * h + j + 2] = image1[i * 3 * h + 3 * h - j - 1];
-			}		
+			}
 	}
 }
 
@@ -64,7 +65,7 @@ void clockwise_rotation()
 			{
 				image2[k] = image1[(h - 1 - j) * w + i];
 				k++;
-			}		
+			}
 	}
 	else
 	{
@@ -122,6 +123,8 @@ void err(int i)
 		printf("Input file can't be open");
 	else if (i == 4)
 		printf("Output file can't be open");
+	fclose(fin);
+	fclose(fout);
 	system("pause");
 	exit(0);
 }
@@ -137,18 +140,17 @@ int main(int argc, char *argv[])
 		fin_name = argv[1];
 		fout_name = argv[2];*/
 		transformation = atoi(argv[3]);
-		if (transformation >= 5 && transformation <= 0)
+		if (transformation >= 5 || transformation < 0)
 			err(1);
 	}
 	else
 		err(1);
 
-	FILE *fin, *fout;
 	fin = fopen(argv[1], "rb");
 	if (fin == NULL)
 		err(3);
 
-	int quantity = fscanf(fin, "%c%d\n%d%d\n%d\n", &symbol, &number, &h, &w, &max_color);	//ñ÷èòûâàíèå è ïðîâåðêà íà êîððåêòíîñòü ïî ðàçìåðó
+	int quantity = fscanf(fin, "%c%d\n%d%d\n%d\n", &symbol, &number, &h, &w, &max_color);
 	if (quantity != 5 || symbol != 'P' || (number != 5 && number != 6) || h <= 0 || w <= 0 || max_color <= 0 || max_color > 255)
 		err(2);
 	if (number == 5)
@@ -167,35 +169,35 @@ int main(int argc, char *argv[])
 		if (quantity != 3 * h * w)
 			err(2);
 	}
-		
+
 	switch (transformation)
 	{
-		case 0:
-			inversion();
-			break;
-		case 1:
-			reflection_gorisontal();
-			break;
-		case 2:
-			reflection_vertical();
-			break;
-		case 3:
-			clockwise_rotation();
-			break;
-		case 4:
-			counterclockwise_rotation();
-			break;
-		default:
-			err(1);
+	case 0:
+		inversion();
+		break;
+	case 1:
+		reflection_gorisontal();
+		break;
+	case 2:
+		reflection_vertical();
+		break;
+	case 3:
+		clockwise_rotation();
+		break;
+	case 4:
+		counterclockwise_rotation();
+		break;
+	default:
+		err(1);
 	}
 
 	//if (!flag_error)
 	//{
-		fout = fopen(argv[2], "wb");
-		if (fout == NULL)
-			err(4);
-		fprintf(fout, "%c%d\n%d %d\n%d\n", symbol, number, h, w, max_color);
-		fwrite(&image2[0], sizeof(unsigned char), image2.size(), fout);
+	fout = fopen(argv[2], "wb");
+	if (fout == NULL)
+		err(4);
+	fprintf(fout, "%c%d\n%d %d\n%d\n", symbol, number, h, w, max_color);
+	fwrite(&image2[0], sizeof(unsigned char), image2.size(), fout);
 	//}
 	fclose(fin);
 	fclose(fout);
