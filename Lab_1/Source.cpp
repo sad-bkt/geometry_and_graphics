@@ -194,12 +194,12 @@ int main(int argc, char *argv[])
 		fout = fopen(argv[2], "wb");
 		if (fout == NULL)
 			err(4);
-		printf("DONE");
 		fprintf(fout, "%c%d\n%d %d\n%d\n", symbol, number, h, w, max_color);
 		fwrite(&image2[0], sizeof(unsigned char), image2.size(), fout);
 	//}
 	fclose(fin);
 	fclose(fout);
+	printf("DONE");
 	system("pause");
 	return 0;
 }
