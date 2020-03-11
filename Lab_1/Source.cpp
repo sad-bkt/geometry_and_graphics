@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
 	if (fin == NULL)
 		err(3);
 
-	int quantity = fscanf(fin, "%c%d\n%d%d\n%d\n", &symbol, &number, &h, &w, &max_color);	//считывание и проверка на корректность по размеру
+	int quantity = fscanf(fin, "%c%d\n%d%d\n%d\n", &symbol, &number, &h, &w, &max_color);	//Г±Г·ГЁГІГ»ГўГ Г­ГЁГҐ ГЁ ГЇГ°Г®ГўГҐГ°ГЄГ  Г­Г  ГЄГ®Г°Г°ГҐГЄГІГ­Г®Г±ГІГј ГЇГ® Г°Г Г§Г¬ГҐГ°Гі
 	if (quantity != 5 || symbol != 'P' || (number != 5 && number != 6) || h <= 0 || w <= 0 || max_color <= 0 || max_color > 255)
 		err(2);
 	if (number == 5)
