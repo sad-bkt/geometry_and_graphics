@@ -375,7 +375,7 @@ int main(int argc, char *argv[])
         //рисую градиент
         for (int y = 0; y < h; ++y)
             for (int x = 0; x < w; ++x)
-                image1_[y * w + x] = (double)x / (double)w;
+                image1_[y * w + x] = (double)x / (double)w * 256. / 255.;
     }
     switch (dithering)
     {
