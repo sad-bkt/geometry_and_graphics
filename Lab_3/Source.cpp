@@ -15,57 +15,28 @@ vector<unsigned char> image1, image2;
 vector<double> image1_;
 FILE *fin, *fout;
 
+double gamma_correction(double color)
+{
+    if (gamma_ == 0)//sRGB
+    {
+        if (color <= 0.04045)
+            color = color / 12.92;
+        else
+            color = pow((color + 0.055) / 1.055, 2.4);
+    }
+    else
+    {
+        color = pow(color, gamma_);
+    }
+    return color * 255;
+
+}
 unsigned char find_nearest_palette_color(double color)
 {
+    color = gamma_correction(color);
     return (unsigned char)min(max(color, 0.), 255.);
 }
 
-double find_nearest_palette_color_double(double color)
-{
-    return min(max(color, 0.), 1.);
-}
-
-void gamma_correction_to_file()
-{
-    double color;
-    for (int i = 0; i < h * w; i++)
-    {
-        color = (double)image2[i] / 255.;
-        if (gamma_ == 0)//sRGB
-        {
-            if (color <= 0.04045)
-                color = color / 12.92;
-            else
-                color = pow((color + 0.055) / 1.055, 2.4);
-        }
-        else
-        {
-            color = pow(color, gamma_);
-        }
-        image2[i] = find_nearest_palette_color(color * 255);
-    }
-}
-
-void gamma_correction_from_file()
-{
-    double color;
-    for (int i = 0; i < h * w; i++)
-    {
-        color = (double)image1[i] / 255.;
-        if (gamma_ == 0)//sRGB
-        {
-            if (color <= 0.0031308)
-                color = 12.92 * color;
-            else
-                color = 1.055 * pow(color, 1. / 2.4) - 0.055;
-        }
-        else
-        {
-            color = pow(color, 1 / gamma_);
-        }
-        image1_[i] = find_nearest_palette_color_double(color);
-    }
-}
 
 unsigned char change_bitness(unsigned char color)
 {
@@ -76,12 +47,57 @@ unsigned char change_bitness(unsigned char color)
     return color;
 }
 
+unsigned char change_bitness_for_random(unsigned char color)
+{
+    unsigned char color1 = color, color2;
+    unsigned char new_ = (((1u << bitness) - 1) << (8 - bitness)) & color; //11111111->11...000->color...00
+    unsigned char new__ = new_;
+    color2 = 0;
+    for (int i = 0; i <= 8 / bitness; i++)
+        color2 |= (unsigned char)(new_ >> bitness * i);
+
+    if((double)rand() / (double)RAND_MAX > 0.5)
+    {
+        if(color2 > color1)
+            return color2;
+        else
+        {
+            if((new__ >> (8 - bitness)) != (1 << (bitness)) - 1)
+            {
+                new_ = ((new__ >> (8 - bitness)) + 1) << (8 - bitness);
+                color2 = 0;
+                for (int i = 0; i <= 8 / bitness; i++)
+                    color2 |= (unsigned char)(new_ >> bitness * i);
+            }
+            return color2;
+        }
+    }
+    else
+    {
+        if(color2 > color1)
+            return color1;
+        else
+        {
+            if((int)new__ != 0)
+            {
+                new_ = ((new__ >> (8 - bitness)) - 1) << (8 - bitness);
+                color2 = 0;
+                for (int i = 0; i <= 8 / bitness; i++)
+                    color2 |= (unsigned char)(new_ >> bitness * i);
+            }
+            return color2;
+        }
+    }
+
+
+}
+
 void dithering_no()
 {
     //if(bitness != 8)
     for (int y = 0; y < h; ++y)
         for (int x = 0; x < w; ++x)
-            image2[y * w + x] = change_bitness(255 * image1_[y * w + x]);
+            image2[y * w + x] = change_bitness(find_nearest_palette_color(image1_[y * w + x]));
 }
 
 void dithering_ordered()
@@ -102,7 +118,7 @@ void dithering_ordered()
             image2[y * w + x] = change_bitness(
                     find_nearest_palette_color
                             (
-                                    255 * (image1_[y * w + x] + ((m[x % n][y % n] + 1) / 64 - 0.5))
+                                    (image1_[y * w + x] + ((m[x % n][y % n] + 1) / 64 - 0.5))
                             )
             );
 }
@@ -111,12 +127,26 @@ void dithering_random()
 {
     for (int y = 0; y < h; ++y)
         for (int x = 0; x < w; ++x)
+        {
             image2[y * w + x] = change_bitness(
                     find_nearest_palette_color
                             (
-                                    255 * (image1_[y * w + x] + (double)rand() / (double)RAND_MAX - 0.5)
+                                    (image1_[y * w + x] + 2 * ((double)rand() / (double)RAND_MAX - 0.5) * ((1 << (8 - bitness)) * 1. / 256.))
                             )
             );
+//            image1_[y * w + x] += ((double)rand() / (double)RAND_MAX - 0.5) * ((1 << (8 - bitness)) * 1. / 256.);
+//            image1_[y * w + x] = min(max(image1_[y * w + x], 0.), 1.);
+//            image1_[y * w + x] = change_bitness_for_random(255 * image1_[y * w + x]) / 255.;
+//            image2[y * w + x] = find_nearest_palette_color(image1_[y * w + x]);
+
+//            image1_[y * w + x] = gamma_correction(image1_[y * w + x]);
+//            if((double)rand() / (double)RAND_MAX > 0.5)
+//                image1_[y * w + x] = ceil(image1_[y * w + x]);
+//            else
+//                image1_[y * w + x] = floor(image1_[y * w + x]);
+//            image1_[y * w + x] = (unsigned char)min(max(image1_[y * w + x], 0.), 255.);
+//            image2[y * w + x] = change_bitness(image1_[y * w + x]);
+        }
 }
 
 void dithering_floyd_steinberg()
@@ -131,7 +161,7 @@ void dithering_floyd_steinberg()
         {
             unsigned char tmp = find_nearest_palette_color
                     (
-                            (image1_[y * w + x] + error[y * w + x]) * 255
+                            (image1_[y * w + x] + error[y * w + x])
                     );
             image2[y * w + x] = change_bitness(tmp);
             double quant_error = (tmp - image2[y * w + x]) / 255.;
@@ -162,7 +192,7 @@ void dithering_jarvis_judice_ninke()
         {
             unsigned char tmp = find_nearest_palette_color
                     (
-                            (image1_[y * w + x] + error[y * w + x]) * 255
+                            (image1_[y * w + x] + error[y * w + x])
                     );
             image2[y * w + x] = change_bitness(tmp);
             double quant_error = (tmp - image2[y * w + x]) / 255.;
@@ -212,7 +242,7 @@ void dithering_sierra()
         {
             unsigned char tmp = find_nearest_palette_color
                     (
-                            (image1_[y * w + x] + error[y * w + x]) * 255
+                            (image1_[y * w + x] + error[y * w + x])
                     );
             image2[y * w + x] = change_bitness(tmp);
             double quant_error = (tmp - image2[y * w + x]) / 255.;
@@ -258,7 +288,7 @@ void dithering_atkinson()
         {
             unsigned char tmp = find_nearest_palette_color
                     (
-                            (image1_[y * w + x] + error[y * w + x]) * 255
+                            (image1_[y * w + x] + error[y * w + x])
                     );
             image2[y * w + x] = change_bitness(tmp);
             double quant_error = (tmp - image2[y * w + x]) / 255.;
@@ -296,7 +326,7 @@ void dithering_halftone()
             image2[y * w + x] = change_bitness(
                     find_nearest_palette_color
                             (
-                                    255 * (image1_[y * w + x] + ((m[x % n][y % n] + 1) / 16 - 0.5))
+                                    (image1_[y * w + x] + ((m[x % n][y % n]) - 8.5)/ 16)
                             )
             );
 }
@@ -306,30 +336,39 @@ int main(int argc, char *argv[])
     //printf("PROCESSING\n");
 
     //program.exe <имя_входного_файла> <имя_выходного_файла> <градиент> <дизеринг> <битность> <гамма>
+
     if (argc == 7)
     {
-        grad = atoi(argv[3]);
-        if (grad != 0 && grad != 1)
+        try
         {
-            cerr << "Gradient != 1 and gradient != 0";
-            return 1;
+            grad = stoi(argv[3]);
+            if (grad != 0 && grad != 1)
+            {
+                cerr << "Gradient != 1 and gradient != 0";
+                return 1;
+            }
+            dithering = stoi(argv[4]);
+            if (dithering < 0 || dithering > 7)
+            {
+                cerr << "Dithering should be in [0..7]";
+                return 1;
+            }
+            bitness = stoi(argv[5]);
+            if (bitness < 1 || bitness > 8)
+            {
+                cerr << "Bit should be in [1..8]";
+                return 1;
+            }
+            gamma_ = stod(argv[6]);
+            if (gamma_ < 0)
+            {
+                cerr << "Gamma should be >= 0";
+                return 1;
+            }
         }
-        dithering = atoi(argv[4]);
-        if (dithering < 0 || dithering > 7)
+        catch(...)
         {
-            cerr << "Dithering should be in [0..7]";
-            return 1;
-        }
-        bitness = atoi(argv[5]);
-        if (bitness < 1 || bitness > 8)
-        {
-            cerr << "Bit should be in [1..8]";
-            return 1;
-        }
-        gamma_ = atof(argv[6]);
-        if (gamma_ < 0)
-        {
-            cerr << "Gamma should be >= 0";
+            cerr << "Invalid arguments";
             return 1;
         }
     }
@@ -342,7 +381,6 @@ int main(int argc, char *argv[])
     fin = fopen(argv[1], "rb");
     if (fin == NULL)
     {
-        fclose(fin);
         cerr << "Input file can't be open";
         return 1;
     }
@@ -365,7 +403,9 @@ int main(int argc, char *argv[])
             cerr << "Quantity != width * height";
             return 1;
         }
-        gamma_correction_from_file();
+        for (int y = 0; y < h; ++y)
+            for (int x = 0; x < w; ++x)
+                image1_[y * w + x] = (double)image1[y * w + x] / 255.;
     }
     else
     {
@@ -377,6 +417,7 @@ int main(int argc, char *argv[])
             for (int x = 0; x < w; ++x)
                 image1_[y * w + x] = (double)x / (double)w * 256. / 255.;
     }
+    fclose(fin);
     switch (dithering)
     {
         case 0:
@@ -404,13 +445,9 @@ int main(int argc, char *argv[])
             dithering_halftone();
             break;
         default:
-            fclose(fin);
             cerr << "Dithering should be in [0..7]";
             return 1;
     }
-    fclose(fin);
-
-    gamma_correction_to_file();
 
     fout = fopen(argv[2], "wb");
     if (fout == NULL)
@@ -419,8 +456,13 @@ int main(int argc, char *argv[])
         return 1;
     }
     fprintf(fout, "%c%d\n%d %d\n%d\n", symbol, number, w, h, max_color);
-    fwrite(&image2[0], sizeof(unsigned char), image2.size(), fout);
+    quantity = fwrite(&image2[0], sizeof(unsigned char), image2.size(), fout);
     fclose(fout);
+    if (quantity != h * w)
+    {
+        cerr << "Quantity of outputfile != width * height";
+        return 1;
+    }
 
     //printf("DONE");
     //system("pause");
