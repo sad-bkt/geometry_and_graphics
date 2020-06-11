@@ -414,11 +414,11 @@ int main(int argc, char *argv[])
         {
             string name_of_file = input_f;
             if(i == 1)
-                name_of_file.insert( name_of_file.find("."), "_1");
+                name_of_file.insert( name_of_file.find_last_of("."), "_1");
             else if(i == 2)
-                name_of_file.insert( name_of_file.find("."), "_2");
+                name_of_file.insert( name_of_file.find_last_of("."), "_2");
             else
-                name_of_file.insert( name_of_file.find("."), "_3");
+                name_of_file.insert( name_of_file.find_last_of("."), "_3");
             char *name = &name_of_file[0];
             fin = fopen(name, "rb");
             if (fin == NULL)
@@ -543,16 +543,16 @@ int main(int argc, char *argv[])
         {
             string name_of_file = output_f;
             if(i == 1)
-                name_of_file.insert( name_of_file.find("."), "_1");
+                name_of_file.insert( name_of_file.find_last_of("."), "_1");
             else if(i == 2)
-                name_of_file.insert( name_of_file.find("."), "_2");
+                name_of_file.insert( name_of_file.find_last_of("."), "_2");
             else
-                name_of_file.insert( name_of_file.find("."), "_3");
+                name_of_file.insert( name_of_file.find_last_of("."), "_3");
             char *name = &name_of_file[0];
             fout = fopen(name, "wb");
             if (fout == NULL)
             {
-                cerr << "Input file can't be open";
+                cerr << "Output file can't be open";
                 return 1;
             }
             fprintf(fout, "%c%d\n%d %d\n%d\n", symbol, 5, w, h, max_color);
@@ -583,7 +583,7 @@ int main(int argc, char *argv[])
         fout = fopen(name, "wb");
         if (fout == NULL)
         {
-            cerr << "Input file can't be open";
+            cerr << "Output file can't be open";
             return 1;
         }
         fprintf(fout, "%c%d\n%d %d\n%d\n", symbol, 6, w, h, max_color);
