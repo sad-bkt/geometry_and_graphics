@@ -24,7 +24,7 @@ void from_RGB_to_YCbCr_601()
     double K_r = 0.299;
     double K_g = 0.587;
     double K_b = 0.114;
-    for(int i = 0; i < 3 * h * w; i++)
+    for(int i = 0; i < 3 * h * w; i += 3)
     {
         double R = image[i] / 255.;
         double G = image[i + 1] / 255.;
@@ -43,7 +43,7 @@ void from_YCbCr_601_to_RGB()
     double K_r = 0.299;
     double K_g = 0.587;
     double K_b = 0.114;
-    for(int i = 0; i < 3 * h * w; i++)
+    for(int i = 0; i < 3 * h * w; i += 3)
     {
         double Y = image[i] / 255.;
         double C_b = image[i + 1] / 255. - 0.5;
