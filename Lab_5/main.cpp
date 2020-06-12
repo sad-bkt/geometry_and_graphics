@@ -19,6 +19,45 @@ unsigned char find_nearest(double color)
     return (unsigned char)min(max(color, 0.), 255.);
 }
 
+void from_RGB_to_YCbCr_601()
+{
+    double K_r = 0.299;
+    double K_g = 0.587;
+    double K_b = 0.114;
+    for(int i = 0; i < 3 * h * w; i++)
+    {
+        double R = image[i] / 255.;
+        double G = image[i + 1] / 255.;
+        double B = image[i + 2] / 255.;
+        double Y =   K_r * R + K_g * G + K_b * B;
+        double C_b = 0.5 * (B - Y) / (1 - K_b);
+        double C_r = 0.5 * (R - Y) / (1 - K_r);
+        image[i] = find_nearest(255 * Y);
+        image[i + 1] = find_nearest(255 * (C_b + 0.5));
+        image[i + 2] = find_nearest(255 * (C_r + 0.5));
+    }
+}
+
+void from_YCbCr_601_to_RGB()
+{
+    double K_r = 0.299;
+    double K_g = 0.587;
+    double K_b = 0.114;
+    for(int i = 0; i < 3 * h * w; i++)
+    {
+        double Y = image[i] / 255.;
+        double C_b = image[i + 1] / 255. - 0.5;
+        double C_r = image[i + 2] / 255. - 0.5;
+        double R = Y +  C_r * 2 * (1 - K_r);
+        double B = Y + C_b * 2 * (1 - K_b);
+        double G = (Y - K_r * R - K_b * B) / K_g;
+        image[i] = find_nearest(255 * R);
+        image[i + 1] = find_nearest(255 * G);
+        image[i + 2] = find_nearest(255 * B);
+    }
+}
+
+
 int main(int argc, char *argv[])
 {
     //lab5.exe <имя_входного_файла> <имя_выходного_файла> <преобразование> [<смещение> <множитель>]
@@ -99,7 +138,10 @@ int main(int argc, char *argv[])
 
     int plus = 1;
     if(transformation % 2 == 1 && number == 6)//YCbCr P6
+    {
         plus = 3;
+        from_RGB_to_YCbCr_601();
+    }
 
     if(transformation != 0 && transformation != 1)//нахожу offset, multiplier
     {
@@ -134,6 +176,9 @@ int main(int argc, char *argv[])
     }
     for(int i = 0; i < quantity; i += plus)
         image[i] = find_nearest((image[i] - offset) * multiplier);
+
+    if(transformation % 2 == 1 && number == 6)//YCbCr P6
+        from_YCbCr_601_to_RGB();
 
 
     fout = fopen(argv[2], "wb");
