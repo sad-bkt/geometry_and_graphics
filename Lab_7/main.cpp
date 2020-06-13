@@ -7,18 +7,17 @@
 
 using namespace std;
 
-int transformation, offset, quantity;
+int quantity;
 double sharpen;
 char symbol;
 int number, h, w, max_color;
-vector<unsigned char> image, R_, G_, B_;
+vector<unsigned char> image;
+//P6
+vector<unsigned char> R_, G_, B_;
 vector<double> R, G, B;
+//P5
+vector<double> RGB;
 FILE *fin, *fout;
-
-unsigned char find_nearest(double color)
-{
-    return (unsigned char)min(max(color, 0.), 255.);
-}
 
 double Sat(double c)
 {
@@ -73,12 +72,17 @@ int main(int argc, char *argv[])
     if (number == 5)
     {
         image.resize(h * w, 0);
+        RGB.resize(h * w, 0);
         quantity = fread(&image[0], sizeof(unsigned char), image.size(), fin);
         fclose(fin);
         if (quantity != h * w)
         {
             cerr << "Invalid pgm file: quantity != h * w";
             return 1;
+        }
+        for(int i = 0; i < h * w; i++)
+        {
+            RGB[i] = image[i] / 255.;
         }
     }
     else
@@ -108,7 +112,56 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (number == 6)
+    //Contrast Adaptive Sharpening with better diagonals
+    if (number == 5)
+    {
+        for (int y = 1; y < h - 1; ++y)
+            for (int x = 1; x < w - 1; ++x)
+            {
+                int a = (y - 1) * w + x - 1;
+                int b = (y - 1) * w + x;
+                int c = (y - 1) * w + x + 1;
+                int d = y * w + x - 1;
+                int e = y * w + x;
+                int f = y * w + x + 1;
+                int g = (y + 1) * w + x - 1;
+                int h = (y + 1) * w + x;
+                int i = (y + 1) * w + x + 1;
+
+                // Soft min and max.
+                //  a b c             b
+                //  d e f * 0.5  +  d e f * 0.5
+                //  g h i             h
+                // These are 2.0x bigger (factored out the extra multiply).
+                double min_ = min(RGB[d], min(RGB[e], min(RGB[f], min(RGB[b], RGB[h]))));
+                double min_2 = min(min_, min(RGB[a], min(RGB[c], (min(RGB[g], RGB[i])))));
+                min_ += min_2;
+
+                double max_ = max(RGB[d], max(RGB[e], max(RGB[f], max(RGB[b], RGB[h]))));
+                double max_2 = max(max_, max(RGB[a], max(RGB[c], (max(RGB[g], RGB[i])))));
+                max_ += max_2;
+
+                double rcpM = 1. / max_;
+
+                double amp= Sat(min(min_, 2.0 - max_) * rcpM);
+
+                amp = sqrt(amp);
+
+                // Filter shape.
+                //  0 w 0
+                //  w 1 w
+                //  0 w 0
+                //double peak=AF1_AU1(const1.x);
+                double sharp = - 1. / (mix(8.0,5.0, Sat(sharpen)));
+                double peak = sharp;
+                double wRGB = amp * peak;
+
+                double rcpWeight = 1. / (1.0 + 4.0 * wRGB);
+
+                image[y * w + x] = (unsigned char)(255 * Sat((RGB[b] * wRGB + RGB[d] * wRGB + RGB[f] * wRGB + RGB[h] * wRGB + RGB[e]) * rcpWeight));
+            }
+    }
+    else
     {
         for (int y = 1; y < h - 1; ++y)
             for (int x = 1; x < w - 1; ++x)
@@ -143,6 +196,12 @@ int main(int argc, char *argv[])
                 max_G += max_G2;
                 max_B += max_B2;
 
+                // Soft min and max.
+                //  a b c             b
+                //  d e f * 0.5  +  d e f * 0.5
+                //  g h i             h
+                // These are 2.0x bigger (factored out the extra multiply).
+
                 double rcpMR = 1. / max_R;
                 double rcpMG = 1. / max_G;
                 double rcpMB = 1. / max_B;
@@ -170,9 +229,6 @@ int main(int argc, char *argv[])
                 double rcpWeightG = 1. / (1.0 + 4.0 * wG);
                 double rcpWeightB = 1. / (1.0 + 4.0 * wB);
 
-//            pixR= Sat((R[b] * wR + R[d] * wR + R[f] * wR + R[h] * wR + R[e]) * rcpWeightR);
-//            pixG= Sat((G[b] * wG + G[d] * wG + G[f] * wG + G[h] * wG + G[e]) * rcpWeightG);
-//            pixB= Sat((B[b] * wB + B[d] * wB + B[f] * wB + B[h] * wB + B[e]) * rcpWeightB);
                 R_[y * w + x] = (unsigned char)(255 * Sat((R[b] * wR + R[d] * wR + R[f] * wR + R[h] * wR + R[e]) * rcpWeightR));
                 G_[y * w + x] = (unsigned char)(255 * Sat((G[b] * wG + G[d] * wG + G[f] * wG + G[h] * wG + G[e]) * rcpWeightG));
                 B_[y * w + x] = (unsigned char)(255 * Sat((B[b] * wB + B[d] * wB + B[f] * wB + B[h] * wB + B[e]) * rcpWeightB));
